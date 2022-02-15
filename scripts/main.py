@@ -133,7 +133,7 @@ def get_controller(controller_name, limb, kin):
     """
     if controller_name == 'workspace':
         # YOUR CODE HERE
-        Kp = None
+        Kp = np.diag([0.2, 0.2, 0.2, 0.4, 0.4, 0.4])
         Kv = None
         controller = WorkspaceVelocityController(limb, kin, Kp, Kv)
     elif controller_name == 'jointspace':

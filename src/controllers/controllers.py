@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from time import time
+from scipy.linalg import logm
 
 # Lab imports
 from utils.utils import *
@@ -447,6 +448,8 @@ class WorkspaceVelocityController(Controller):
         self.Kp = np.diag(Kp)
         self.Kv = np.diag(Kv)
         self.is_jointspace_controller = False
+        self.last_gd = np.zeros((6, 1))
+        self.last_time = time()
 
     def step_control(self, target_position, target_velocity, target_acceleration):
         """
@@ -470,14 +473,23 @@ class WorkspaceVelocityController(Controller):
         target_velocity: (6,) ndarray of desired body-frame se(3) velocity (vx, vy, vz, wx, wy, wz).
         target_acceleration: ndarray of desired accelerations (should you need this?).
         """
-        # current_velocity = self._kin.forward_velocity_kinematics()
-        raise NotImplementedError
         current_position = self._kin.forward_position_kinematics()
-        position_error = target_position - current_position
-        gd = numexp(hat(target_position))
+        gt = get_g_matrix(current_position[:3], current_position[3:])
+        gd = get_g_matrix(target_position[:3], target_position[3:])
+        gtd = np.linalg.inv(gt).dot(gd)
+        xi_hat = logm(gtd)
+        xi_td = np.block([[xi_hat[:3, -1].reshape((-1, 1))], [xi_hat[2, 1]], [xi_hat[0, 2]], [xi_hat[1, 0]]])
+        time_diff = time() - self.last_time
+        gd_dot = (gd - self.last_gd) / time_diff
+        vdb_hat = np.linalg.inv(gd).dot(gd_dot)
+        vdb = np.block([[vdb_hat[:3, -1].reshape((-1, 1))], [vdb_hat[2, 1]], [vdb_hat[0, 2]], [vdb_hat[1, 0]]])
+        control_law_body = self.Kp.dot(xi_td) + adj(gtd).dot(vdb)
+        control_law_spatial = adj(gt).dot(control_law_body)
         jacobian_pinv = self._kin.jacobian_pseudo_inverse()
-        control_input = jacobian_pinv.dot(error_velocity)
+        control_input = jacobian_pinv.dot(control_law_spatial)
         self._limb.set_joint_velocities(joint_array_to_dict(control_input, self._limb))
+        self.last_time = time()
+        self.last_gd = gd
 
 
 class PDJointVelocityController(Controller):
@@ -520,10 +532,13 @@ class PDJointVelocityController(Controller):
         """
         joint_positions = get_joint_positions()
         error = target_position - joint_positions
+
         time_diff = time() - self.last_time()
         error_derivative = (self.last_error - error) / time_diff
+
         control_input = target_velocity + self.Kp * error + self.Kv * error_derivative
         self._limb.set_joint_velocities(joint_array_to_dict(control_input, self._limb))
+
         self.last_error = error
         self.last_time = time()
 
@@ -568,12 +583,17 @@ class PDJointTorqueController(Controller):
         """
         M = self._kin.inertia(joint_array_to_dict(target_position, self._limb))
         G = self._kin.gravity(joint_array_to_dict(target_position, self._limb))
-        ff_term = M.dot(target_acceleration) + G
+        uff = M.dot(target_acceleration) + G
+
         joint_positions = get_joint_positions()
         error = target_position - joint_positions
+
         time_diff = time() - self.last_time()
         error_derivative = (self.last_error - error) / time_diff
-        control_input = ff_term + self.Kp * error + self.Kv * error_derivative
+        ufb = M.dot(self.Kp * error + self.Kv * error_derivative)
+
+        control_input = uff + ufb
         self._limb.set_joint_torques(joint_array_to_dict(control_input, self._limb))
+        
         self.last_error = error
         self.last_time = time()

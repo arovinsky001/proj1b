@@ -582,12 +582,10 @@ class PDJointTorqueController(Controller):
         target_acceleration: 7x' :obj:`numpy.ndarray` of desired accelerations
         """
         joint_positions = get_joint_positions(self._limb)
-        joint_velocities = get_joint_velocities(self._limb)
 
         M = self._kin.inertia(joint_array_to_dict(joint_positions, self._limb))
         G = self._kin.gravity(joint_array_to_dict(joint_positions, self._limb))
         uff = M.dot(target_acceleration) + 0.05 * G.squeeze()
-        # uff = M.dot(target_acceleration)
 
         error = target_position - joint_positions
 
@@ -596,7 +594,6 @@ class PDJointTorqueController(Controller):
         ufb = self.Kp.dot(error) + self.Kv.dot(error_derivative)
 
         control_input = np.array(uff + ufb).squeeze()
-        # import pdb;pdb.set_trace()
         self._limb.set_joint_torques(joint_array_to_dict(control_input, self._limb))
         
         self.last_error = error

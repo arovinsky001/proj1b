@@ -113,7 +113,7 @@ def get_trajectory(limb, kin, ik_solver, tag_pos, args):
     elif task == 'circle':
         trajectory = CircularTrajectory(time, tag_pos[0] + offset, 0.15)
     elif task == 'polygon':
-        trajectory = PolygonalTrajectory(time, [p + offset for p in tag_pos])
+        trajectory = PolygonalTrajectory(time, [p + offset for p in tag_pos] + [tag_pos[0] + offset])
     else:
         raise ValueError('task {} not recognized'.format(task))
     path = MotionPath(limb, kin, ik_solver, trajectory)

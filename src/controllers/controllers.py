@@ -446,9 +446,9 @@ class WorkspaceVelocityController(Controller):
         """
         Controller.__init__(self, limb, kin)
         self.Kp = np.diag(Kp)
-        self.Kv = np.diag(Kv)
+        # self.Kv = np.diag(Kv)
         self.is_jointspace_controller = False
-        self.last_gd = np.zeros((6, 1))
+        self.last_gd = np.zeros((4, 4))
         self.last_time = time()
 
     def step_control(self, target_position, target_velocity, target_acceleration):
@@ -530,13 +530,13 @@ class PDJointVelocityController(Controller):
         target_velocity: 7x' :obj:`numpy.ndarray` of desired velocities
         target_acceleration: 7x' :obj:`numpy.ndarray` of desired accelerations
         """
-        joint_positions = get_joint_positions()
+        joint_positions = get_joint_positions(self._limb)
         error = target_position - joint_positions
 
-        time_diff = time() - self.last_time()
-        error_derivative = (self.last_error - error) / time_diff
+        time_diff = time() - self.last_time
+        error_derivative = (error - self.last_error) / time_diff
 
-        control_input = target_velocity + self.Kp * error + self.Kv * error_derivative
+        control_input = target_velocity + self.Kp.dot(error) + self.Kv.dot(error_derivative)
         self._limb.set_joint_velocities(joint_array_to_dict(control_input, self._limb))
 
         self.last_error = error
@@ -581,18 +581,22 @@ class PDJointTorqueController(Controller):
         target_velocity: 7x' :obj:`numpy.ndarray` of desired velocities
         target_acceleration: 7x' :obj:`numpy.ndarray` of desired accelerations
         """
-        M = self._kin.inertia(joint_array_to_dict(target_position, self._limb))
-        G = self._kin.gravity(joint_array_to_dict(target_position, self._limb))
-        uff = M.dot(target_acceleration) + G
+        joint_positions = get_joint_positions(self._limb)
+        joint_velocities = get_joint_velocities(self._limb)
 
-        joint_positions = get_joint_positions()
+        M = self._kin.inertia(joint_array_to_dict(joint_positions, self._limb))
+        G = self._kin.gravity(joint_array_to_dict(joint_positions, self._limb))
+        uff = M.dot(target_acceleration) + 0.05 * G.squeeze()
+        # uff = M.dot(target_acceleration)
+
         error = target_position - joint_positions
 
-        time_diff = time() - self.last_time()
-        error_derivative = (self.last_error - error) / time_diff
-        ufb = M.dot(self.Kp * error + self.Kv * error_derivative)
+        time_diff = time() - self.last_time
+        error_derivative = (error - self.last_error) / time_diff
+        ufb = self.Kp.dot(error) + self.Kv.dot(error_derivative)
 
-        control_input = uff + ufb
+        control_input = np.array(uff + ufb).squeeze()
+        # import pdb;pdb.set_trace()
         self._limb.set_joint_torques(joint_array_to_dict(control_input, self._limb))
         
         self.last_error = error

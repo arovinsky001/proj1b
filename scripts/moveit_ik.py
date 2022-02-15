@@ -110,6 +110,6 @@ if __name__ == "__main__":
     quat = [0,0,1,0]
     pose = create_pose_stamped_from_pos_quat(pos, quat)
     res = ik_srv.get_ik(pose, avoid_collisions=True)
-    print res
+    print(res)
 
-    print "ending\n\n\n\n"
+    print("ending\n\n\n\n")

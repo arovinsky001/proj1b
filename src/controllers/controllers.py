@@ -448,8 +448,8 @@ class WorkspaceVelocityController(Controller):
         self.Kp = np.diag(Kp)
         # self.Kv = np.diag(Kv)
         self.is_jointspace_controller = False
-        self.last_gd = np.zeros((4, 4))
-        self.last_time = time()
+        # self.last_gd = np.zeros((4, 4))
+        # self.last_time = time()
 
     def step_control(self, target_position, target_velocity, target_acceleration):
         """
@@ -479,17 +479,18 @@ class WorkspaceVelocityController(Controller):
         gtd = np.linalg.inv(gt).dot(gd)
         xi_hat = logm(gtd)
         xi_td = np.block([[xi_hat[:3, -1].reshape((-1, 1))], [xi_hat[2, 1]], [xi_hat[0, 2]], [xi_hat[1, 0]]])
-        time_diff = time() - self.last_time
-        gd_dot = (gd - self.last_gd) / time_diff
-        vdb_hat = np.linalg.inv(gd).dot(gd_dot)
-        vdb = np.block([[vdb_hat[:3, -1].reshape((-1, 1))], [vdb_hat[2, 1]], [vdb_hat[0, 2]], [vdb_hat[1, 0]]])
-        control_law_body = self.Kp.dot(xi_td) + adj(gtd).dot(vdb)
+        # time_diff = time() - self.last_time
+        # gd_dot = (gd - self.last_gd) / time_diff
+        # vdb_hat = np.linalg.inv(gd).dot(gd_dot)
+        # vdb = np.block([[vdb_hat[:3, -1].reshape((-1, 1))], [vdb_hat[2, 1]], [vdb_hat[0, 2]], [vdb_hat[1, 0]]])
+        # control_law_body = self.Kp.dot(xi_td) + adj(gtd).dot(vdb)
+        control_law_body = self.Kp.dot(xi_td) + adj(gtd).dot(target_velocity)
         control_law_spatial = adj(gt).dot(control_law_body)
         jacobian_pinv = self._kin.jacobian_pseudo_inverse()
         control_input = jacobian_pinv.dot(control_law_spatial)
         self._limb.set_joint_velocities(joint_array_to_dict(control_input, self._limb))
-        self.last_time = time()
-        self.last_gd = gd
+        # self.last_time = time()
+        # self.last_gd = gd
 
 
 class PDJointVelocityController(Controller):

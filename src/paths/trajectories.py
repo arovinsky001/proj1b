@@ -17,7 +17,7 @@ class Trajectory:
         Parameters
         ----------
         total_time : float
-            desired duration of the trajectory in seconds 
+        	desired duration of the trajectory in seconds 
         """
         self.total_time = total_time
 
@@ -28,8 +28,10 @@ class Trajectory:
         the desired end-effector position, and the last four entries are the 
         desired end-effector orientation as a quaternion, all written in the 
         world frame.
+
         Hint: The end-effector pose with the gripper pointing down corresponds 
         to the quaternion [0, 1, 0, 0]. 
+
         Parameters
         ----------
         time : float        
@@ -46,11 +48,14 @@ class Trajectory:
         Returns the end effector's desired body-frame velocity at time t as a 6D
         twist. Note that this needs to be a rigid-body velocity, i.e. a member 
         of se(3) expressed as a 6D vector.
+
         The function get_g_matrix from utils may be useful to perform some frame
         transformations.
+
         Parameters
         ----------
         time : float
+
         Returns
         -------
         6x' :obj:`numpy.ndarray`
@@ -61,6 +66,7 @@ class Trajectory:
     def display_trajectory(self, num_waypoints=67, show_animation=False, save_animation=False):
         """
         Displays the evolution of the trajectory's position and body velocity.
+
         Parameters
         ----------
         num_waypoints : int
@@ -151,19 +157,22 @@ class LinearTrajectory(Trajectory):
         Trajectory.__init__(self, total_time)
         self.starting_point = starting_point
         self.goal_point = goal_point
+        
 
-    def target_pose(self, time):
+    def target_pose(self, t):
         """
         Returns where the arm end effector should be at time t, in the form of a 
         7D vector [x, y, z, qx, qy, qz, qw]. i.e. the first three entries are 
         the desired end-effector position, and the last four entries are the 
         desired end-effector orientation as a quaternion, all written in the 
         world frame.
+
         Hint: The end-effector pose with the gripper pointing down corresponds 
         to the quaternion [0, 1, 0, 0]. 
+
         Parameters
         ----------
-        time : float        
+        t : float        
     
         Returns
         -------
@@ -183,16 +192,19 @@ class LinearTrajectory(Trajectory):
             pos = self.starting_point + vector / dist * travelled
         return np.append(pos, quat)
 
-    def target_velocity(self, time):
+    def target_velocity(self, t):
         """
         Returns the end effector's desired body-frame velocity at time t as a 6D
         twist. Note that this needs to be a rigid-body velocity, i.e. a member 
         of se(3) expressed as a 6D vector.
+
         The function get_g_matrix from utils may be useful to perform some frame
         transformations.
+
         Parameters
         ----------
-        time : float
+        t : float
+
         Returns
         -------
         6x' :obj:`numpy.ndarray`
@@ -351,12 +363,13 @@ class PolygonalTrajectory(Trajectory):
 def define_trajectories(args):
     """ Define each type of trajectory with the appropriate parameters."""
     trajectory = None
+    time = 10
     if args.task == 'line':
-        trajectory = LinearTrajectory()
+        trajectory = LinearTrajectory(time, np.array([-4, 7, 0]), np.array([8, 11, 0]))
     elif args.task == 'circle':
-        trajectory = CircularTrajectory()
+        trajectory = CircularTrajectory(time, np.array([2, 9, 0]), 4)
     elif args.task == 'polygon':
-        trajectory = PolygonalTrajectory()
+        trajectory = PolygonalTrajectory(time, np.array([[1, 4, 0], [-3, 2, 0], [-3, 13, 0], [-5, 7, 0], [1, 4, 0]]))
     return trajectory
 
 if __name__ == '__main__':

@@ -7,6 +7,7 @@ import copy
 import sys
 import argparse
 import time
+from tkinter import OFF
 import numpy as np
 import signal
 
@@ -104,12 +105,15 @@ def get_trajectory(limb, kin, ik_solver, tag_pos, args):
     current_position = np.array([getattr(trans.transform.translation, dim) for dim in ('x', 'y', 'z')])
     print("Current Position:", current_position)
 
+    time = 10
+    offset = np.array([0, 0, 0.3])
+
     if task == 'line':
-        trajectory = LinearTrajectory()
+        trajectory = LinearTrajectory(time, current_position, tag_pos[0] + offset)
     elif task == 'circle':
-        trajectory = CircularTrajectory()
+        trajectory = CircularTrajectory(time, tag_pos[0] + offset, 0.2)
     elif task == 'polygon':
-        trajectory = PolygonalTrajectory()
+        trajectory = PolygonalTrajectory(time, [p + offset for p in tag_pos])
     else:
         raise ValueError('task {} not recognized'.format(task))
     path = MotionPath(limb, kin, ik_solver, trajectory)

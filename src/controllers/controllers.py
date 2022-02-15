@@ -471,9 +471,10 @@ class WorkspaceVelocityController(Controller):
         target_acceleration: ndarray of desired accelerations (should you need this?).
         """
         # current_velocity = self._kin.forward_velocity_kinematics()
+        raise NotImplementedError
         current_position = self._kin.forward_position_kinematics()
         position_error = target_position - current_position
-        gd = exp(hat(target_position))
+        gd = numexp(hat(target_position))
         jacobian_pinv = self._kin.jacobian_pseudo_inverse()
         control_input = jacobian_pinv.dot(error_velocity)
         self._limb.set_joint_velocities(joint_array_to_dict(control_input, self._limb))

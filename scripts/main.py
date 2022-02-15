@@ -59,7 +59,7 @@ def lookup_tag(tag_number):
         trans = tfBuffer.lookup_transform('base', to_frame, rospy.Time(0), rospy.Duration(10.0))
     except Exception as e:
         print(e)
-        print "Retrying ..."
+        print("Retrying ...")
 
     tag_pos = [getattr(trans.transform.translation, dim) for dim in ('x', 'y', 'z')]
     return np.array(tag_pos)
@@ -102,7 +102,7 @@ def get_trajectory(limb, kin, ik_solver, tag_pos, args):
         print(e)
 
     current_position = np.array([getattr(trans.transform.translation, dim) for dim in ('x', 'y', 'z')])
-    print "Current Position:", current_position
+    print("Current Position:", current_position)
 
     if task == 'line':
         trajectory = LinearTrajectory()
@@ -234,7 +234,7 @@ def main():
         planner.execute_plan(plan)
     else:
         start = robot_trajectory.joint_trajectory.points[0].positions
-        print "START:", robot_trajectory.joint_trajectory.points[0].positions
+        print("START:", robot_trajectory.joint_trajectory.points[0].positions)
         
         while not rospy.is_shutdown():
             try:
@@ -243,8 +243,8 @@ def main():
                 planner.execute_plan(plan)
                 break
             except moveit_commander.exception.MoveItCommanderException as e:
-                print e
-                print "Failed planning, retrying..."
+                print(e)
+                print("Failed planning, retrying...")
 
     if args.controller_name == "moveit":
         # by publishing the trajectory to the move_group/display_planned_path topic, you should 
@@ -279,7 +279,7 @@ def main():
             log=args.log
         )
         if not done:
-            print 'Failed to move to position'
+            print('Failed to move to position')
             sys.exit(0)
 
 

@@ -12,6 +12,7 @@ import itertools
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+from time import time
 
 # Lab imports
 from utils.utils import *
@@ -247,7 +248,7 @@ class Controller:
                 plt.xlabel("Time (t)")
                 plt.ylabel("Joint " + str(joint) + " Velocity Error")
                 plt.legend()
-            print "Close the plot window to continue"
+            print("Close the plot window to continue")
             plt.show()
 
         else:
@@ -275,7 +276,7 @@ class Controller:
             plt.ylabel(workspace_joints[joint] + " Velocity Error")
             plt.legend()
 
-        print "Close the plot window to continue"
+        print("Close the plot window to continue")
         plt.show()
 
         # Plot orientation error. This is measured by considering the
@@ -294,7 +295,7 @@ class Controller:
         plt.plot(times, angles)
         plt.xlabel("Time (s)")
         plt.ylabel("Error Angle of End Effector (rad)")
-        print "Close the plot window to continue"
+        print("Close the plot window to continue")
         plt.show()
         
 
@@ -469,8 +470,12 @@ class WorkspaceVelocityController(Controller):
         target_velocity: (6,) ndarray of desired body-frame se(3) velocity (vx, vy, vz, wx, wy, wz).
         target_acceleration: ndarray of desired accelerations (should you need this?).
         """
-        raise NotImplementedError
-        control_input = None        
+        # current_velocity = self._kin.forward_velocity_kinematics()
+        current_position = self._kin.forward_position_kinematics()
+        position_error = target_position - current_position
+        gd = exp(hat(target_position))
+        jacobian_pinv = self._kin.jacobian_pseudo_inverse()
+        control_input = jacobian_pinv.dot(error_velocity)
         self._limb.set_joint_velocities(joint_array_to_dict(control_input, self._limb))
 
 
@@ -495,11 +500,13 @@ class PDJointVelocityController(Controller):
         self.Kp = np.diag(Kp)
         self.Kv = np.diag(Kv)
         self.is_jointspace_controller = True
+        self.last_error = 0
+        self.last_time = time()
 
     def step_control(self, target_position, target_velocity, target_acceleration):
         """
         Makes a call to the robot to move according to it's current position and the desired position 
-        according to the input path and the current time. his method should call
+        according to the input path and the current time. This method should call
         get_joint_positions and get_joint_velocities from the utils package to get the current joint 
         position and velocity and self._limb.set_joint_velocities() to set the joint velocity to something.  
         You may find joint_array_to_dict() in utils.py useful as well.
@@ -510,9 +517,14 @@ class PDJointVelocityController(Controller):
         target_velocity: 7x' :obj:`numpy.ndarray` of desired velocities
         target_acceleration: 7x' :obj:`numpy.ndarray` of desired accelerations
         """
-        raise NotImplementedError
-        control_input = None
+        joint_positions = get_joint_positions()
+        error = target_position - joint_positions
+        time_diff = time() - self.last_time()
+        error_derivative = (self.last_error - error) / time_diff
+        control_input = target_velocity + self.Kp * error + self.Kv * error_derivative
         self._limb.set_joint_velocities(joint_array_to_dict(control_input, self._limb))
+        self.last_error = error
+        self.last_time = time()
 
 class PDJointTorqueController(Controller):
     def __init__(self, limb, kin, Kp, Kv):
@@ -528,6 +540,8 @@ class PDJointTorqueController(Controller):
         self.Kp = np.diag(Kp)
         self.Kv = np.diag(Kv)
         self.is_jointspace_controller = True
+        self.last_error = 0
+        self.last_time = time()
 
     def step_control(self, target_position, target_velocity, target_acceleration):
         """
@@ -551,6 +565,14 @@ class PDJointTorqueController(Controller):
         target_velocity: 7x' :obj:`numpy.ndarray` of desired velocities
         target_acceleration: 7x' :obj:`numpy.ndarray` of desired accelerations
         """
-        raise NotImplementedError
-        control_input = None
+        M = self._kin.inertia(joint_array_to_dict(target_position, self._limb))
+        G = self._kin.gravity(joint_array_to_dict(target_position, self._limb))
+        ff_term = M.dot(target_acceleration) + G
+        joint_positions = get_joint_positions()
+        error = target_position - joint_positions
+        time_diff = time() - self.last_time()
+        error_derivative = (self.last_error - error) / time_diff
+        control_input = ff_term + self.Kp * error + self.Kv * error_derivative
         self._limb.set_joint_torques(joint_array_to_dict(control_input, self._limb))
+        self.last_error = error
+        self.last_time = time()

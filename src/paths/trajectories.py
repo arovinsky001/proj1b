@@ -219,7 +219,7 @@ class LinearTrajectory(Trajectory):
             vel = 2 * v_max * t / T
         else:
             vel = 2 * v_max * (1 - t / T)
-        return  vel * direction
+        return  np.append(vel * direction, np.zeros(3))
 
 class CircularTrajectory(Trajectory):
 
@@ -293,7 +293,7 @@ class CircularTrajectory(Trajectory):
             angle = angular_v_max * (2 * t - t**2 / T - T / 2)
         vel = angular_v * self.radius
         direction = np.array([np.cos(angle + np.pi / 2), np.sin(angle + np.pi / 2), 0])
-        return vel * direction
+        return np.append(vel * direction, np.zeros(3))
 
 class PolygonalTrajectory(Trajectory):
     def __init__(self, total_time, endpoints):
